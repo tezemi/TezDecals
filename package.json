@@ -1,0 +1,16 @@
+{
+  "name": "com.tezemi.tezdecals",
+  "displayName": "TezDecals",
+  "version": "1.0.0",
+  "unity": "2020.3",
+  "description": "Tool for creating decals.",
+  "type": "library",
+  "keywords": [
+    "Decals",
+	"Utilities"
+  ],
+  "author": {
+    "name": "Tezemi",
+    "url": "https://github.com/tezemi"
+  }
+}

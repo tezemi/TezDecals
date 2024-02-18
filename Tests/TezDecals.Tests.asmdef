@@ -1,0 +1,21 @@
+{
+    "name": "TezDecals.Tests",
+    "rootNamespace": "TezDecals.Tests",
+    "references": [
+        "GUID:5984e871705c45e40b0f9c763c85e60e",
+        "GUID:9b77cd65d5530f54698ecf7bb0c0e683"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_EDITOR"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
