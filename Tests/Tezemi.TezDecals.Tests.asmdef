@@ -1,5 +1,5 @@
 {
-    "name": "TezDecals.Tests",
+    "name": "Tezemi.TezDecals.Tests",
     "rootNamespace": "TezDecals.Tests",
     "references": [
         "GUID:5984e871705c45e40b0f9c763c85e60e",

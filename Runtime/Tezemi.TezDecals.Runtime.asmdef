@@ -1,12 +1,10 @@
 {
-    "name": "TezDecals.Editor",
-    "rootNamespace": "TezDecals.Editor",
+    "name": "Tezemi.TezDecals.Runtime",
+    "rootNamespace": "TezDecals.Runtime",
     "references": [
-        "GUID:5984e871705c45e40b0f9c763c85e60e"
+        "GUID:48c9f6afdac61634db0e0f241c7d4d51"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
