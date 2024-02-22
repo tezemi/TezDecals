@@ -385,7 +385,7 @@ namespace TezDecals.Runtime
 
 					var normal = GetNormal(triangle);
 
-					if (Vector3.Angle(Vector3.back, normal) <= MaxAngle)
+					if (Vector3.Angle(-transform.forward, normal) <= MaxAngle)
 						yield return transformedTriangle;
 				}
 			}
