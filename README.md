@@ -84,7 +84,7 @@ If a decal doesn't update, or you move the surface under it, you can click the "
 - If a decal doesn't move or need to be regenerated throughout your scene, you may want to mark it as static.
 
 # Creating Decals at Runtime (In Code)
-Creating decals at runtime is fairly straightforward. You may use the method `Decal.Create()` to create a new decal. This will create a new game object with the decal already attached to it.
+Creating decals at runtime is fairly straightforward. You may use the method `Decal.CreateDecal(Vector3, Quaternion, Material, Sprite)` to create a new decal. This will create a new game object with the decal already attached to it.
 It takes the following arguments:
 - The coordinates where to create the decal.
 - The rotation of the decal.
@@ -93,7 +93,7 @@ It takes the following arguments:
 - Optional: The max angle.
 - Optional: The offset.
 
-Using this method, it's fairly easy to create a decal based off of a raycast. This can be used to create things like bulletholes and bloodsplatters, or other less violent things if you want. Here's an example:
+Using this method, it's fairly easy to create a decal based off of a raycast. This can be used to create things like bullet holes and blood splatters, or other less violent things if you want. Here's an example:
 ```
 var transform = Camera.current.transform;
 var raycastHit = Physics.Raycast(new Ray(transform.position, transform.forward), out var hitInfo);
