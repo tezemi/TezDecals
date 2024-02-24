@@ -13,7 +13,7 @@ namespace TezDecals.Runtime
     public class Decal : MonoBehaviour
     {
         public bool FixedAspect = true;
-        public int MaxAngle = 90;
+        public int MaxAngle = 120;
         public float Offset = 0.009f;
 		public LayerMask LayerMask = -1;
 		public Material Material;
