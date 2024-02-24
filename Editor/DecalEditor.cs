@@ -87,7 +87,7 @@ namespace TezDecals.Editor
 
         private LayerMask LayerMaskField(string label, LayerMask mask)
 		{
-			var names = Enumerable.Range(0, 32).Select(i => LayerMask.LayerToName(i)).Where(i => !string.IsNullOrEmpty(i)).ToArray();
+			var names = Enumerable.Range(0, 32).Select(i => LayerMask.LayerToName(i)).Reverse().SkipWhile(s => string.IsNullOrEmpty(s)).Reverse().ToArray();
 
 			return EditorGUILayout.MaskField(label, mask.value, names);
 		}

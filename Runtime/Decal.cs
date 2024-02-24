@@ -1,6 +1,8 @@
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
+using static UnityEditor.Experimental.GraphView.GraphView;
+using UnityEngine.UI;
 
 namespace TezDecals.Runtime
 {
@@ -235,13 +237,13 @@ namespace TezDecals.Runtime
 
 				var bounds = Bounds;
 				var intersectingMeshes = FindObjectsOfType<MeshRenderer>()
-						.Where(mr => mr.gameObject.isStatic || !gameObject.isStatic)
-						.Where(mr => (LayerMask.value & 1 << mr.gameObject.layer) != 0)
-						.Where(mr => !mr.TryGetComponent<Decal>(out var _))
-						.Where(mr => bounds.Intersects(mr.bounds)) 
-					.Select(mf => mf.GetComponent<MeshFilter>())
-						.Where(mf => mf.sharedMesh != null)
-					.ToArray();
+				.Where(mr => bounds.Intersects(mr.bounds) &&
+							(LayerMask & (1 << mr.gameObject.layer)) != 0 &&
+							(mr.gameObject.isStatic || !gameObject.isStatic) &&
+							!mr.TryGetComponent<Decal>(out var _))					
+				.Select(mf => mf.GetComponent<MeshFilter>())
+					.Where(mf => mf.sharedMesh != null)
+				.ToArray();
 				
 				foreach (var triangle in GetTriangles(intersectingMeshes))
 				{
@@ -344,6 +346,11 @@ namespace TezDecals.Runtime
 				UnityEditor.EditorUtility.SetDirty(gameObject);
 			}
 			#endif
+		}
+
+		private bool LayerMaskIncludes(LayerMask mask, int layer)
+		{
+			return (mask & (1 << layer)) != 0;
 		}
 
 		private Rect GetSpriteUV()
