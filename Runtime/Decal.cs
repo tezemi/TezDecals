@@ -1,8 +1,6 @@
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEditor.Experimental.GraphView.GraphView;
-using UnityEngine.UI;
 
 namespace TezDecals.Runtime
 {
@@ -348,11 +346,6 @@ namespace TezDecals.Runtime
 			#endif
 		}
 
-		private bool LayerMaskIncludes(LayerMask mask, int layer)
-		{
-			return (mask & (1 << layer)) != 0;
-		}
-
 		private Rect GetSpriteUV()
 		{
 			var texture = Sprite.texture;
@@ -371,7 +364,7 @@ namespace TezDecals.Runtime
 			foreach (var meshFilter in meshFilters)
 			{
 				var meshFilterIntersectionMatrix = transform.worldToLocalMatrix * meshFilter.transform.localToWorldMatrix;
-
+				
 				var mesh = meshFilter.sharedMesh;
 
 				var vertices = mesh.vertices;
@@ -390,7 +383,7 @@ namespace TezDecals.Runtime
 					var triangle = new Triangle(v1, v2, v3);
 					var transformedTriangle = Transform(triangle, meshFilterIntersectionMatrix);
 
-					var normal = GetNormal(triangle);
+					var normal = GetNormal(transformedTriangle);
 
 					if (Vector3.Angle(-transform.forward, normal) <= MaxAngle)
 						yield return transformedTriangle;
