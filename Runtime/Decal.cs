@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace TezDecals.Runtime
 {
@@ -271,6 +272,11 @@ namespace TezDecals.Runtime
 	
 		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Material material, Sprite sprite, int maxAngle = 90, float offset = 0.009f)
 		{
+			return CreateDecal(position, Vector3.one, rotation, material, sprite, maxAngle, offset);
+		}
+
+		public static Decal CreateDecal(Vector3 position, Vector3 scale, Quaternion rotation, Material material, Sprite sprite, int maxAngle = 90, float offset = 0.009f)
+		{
 			var decalGameObject = new GameObject($"Decal ({sprite.name})", typeof(Decal));
 			var decal = decalGameObject.GetComponent<Decal>();
 
@@ -281,6 +287,7 @@ namespace TezDecals.Runtime
 
 			var tr = decal.transform;
 			tr.position = position;
+			tr.localScale = scale;
 			tr.rotation = rotation;
 
 			decal.GenerateAndSetDirty();
@@ -289,6 +296,11 @@ namespace TezDecals.Runtime
 		}
 
 		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Material material, Sprite sprite, LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
+		{
+			return CreateDecal(position, Vector3.one, rotation, material, sprite, layerMask, maxAngle, offset);
+		}
+
+		public static Decal CreateDecal(Vector3 position, Vector3 scale, Quaternion rotation, Material material, Sprite sprite, LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
 		{
 			var decalGameObject = new GameObject($"Decal ({sprite.name})", typeof(Decal));
 			var decal = decalGameObject.GetComponent<Decal>();
@@ -301,6 +313,7 @@ namespace TezDecals.Runtime
 
 			var tr = decal.transform;
 			tr.position = position;
+			tr.localScale = scale;
 			tr.rotation = rotation;
 
 			decal.GenerateAndSetDirty();
@@ -384,8 +397,9 @@ namespace TezDecals.Runtime
 					var transformedTriangle = Transform(triangle, meshFilterIntersectionMatrix);
 
 					var normal = GetNormal(transformedTriangle);
+					var angle = Vector3.Angle(Vector3.back, normal);
 
-					if (Vector3.Angle(-transform.forward, normal) <= MaxAngle)
+					if (angle <= MaxAngle)
 						yield return transformedTriangle;
 				}
 			}
@@ -403,7 +417,7 @@ namespace TezDecals.Runtime
 			{
 				return Vector3.Cross
 				(
-					triangle.Vector2 - triangle.Vector1, 
+					triangle.Vector2 - triangle.Vector1,
 					triangle.Vector3 - triangle.Vector1
 				).normalized;
 			}
