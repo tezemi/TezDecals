@@ -235,16 +235,13 @@ namespace TezDecals.Runtime
 				_meshGenerator.Clear();
 
 				var bounds = Bounds;
-				var intersectingMeshes = FindObjectsOfType<MeshRenderer>()
-				.Where(mr => bounds.Intersects(mr.bounds) &&
-							(LayerMask & (1 << mr.gameObject.layer)) != 0 &&
-							(mr.gameObject.isStatic || !gameObject.isStatic) &&
-							!mr.TryGetComponent<Decal>(out var _))					
-				.Select(mf => mf.GetComponent<MeshFilter>())
-					.Where(mf => mf.sharedMesh != null)
-				.ToArray();
+				var intersectingRenderers = FindObjectsOfType<Renderer>()
+					.Where(mr => bounds.Intersects(mr.bounds) &&
+					             (LayerMask & (1 << mr.gameObject.layer)) != 0 &&
+					             (mr.gameObject.isStatic || !gameObject.isStatic) &&
+					             !mr.TryGetComponent<Decal>(out var _));
 				
-				foreach (var triangle in GetTriangles(intersectingMeshes))
+				foreach (var triangle in GetTriangles(intersectingRenderers))
 				{
 					var face = TrimFace(triangle.Vector1, triangle.Vector2, triangle.Vector3);
 
@@ -270,41 +267,48 @@ namespace TezDecals.Runtime
 			SetDirty();
 		}
 	
-		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Material material, Sprite sprite, int maxAngle = 90, float offset = 0.009f)
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Material material, Sprite sprite, 
+			int maxAngle = 90, float offset = 0.009f)
 		{
-			return CreateDecal(position, Vector3.one, rotation, material, sprite, maxAngle, offset);
+			return CreateDecal(position, rotation, Vector3.one, null, material, sprite, ~0, maxAngle, offset);
 		}
 
-		public static Decal CreateDecal(Vector3 position, Vector3 scale, Quaternion rotation, Material material, Sprite sprite, int maxAngle = 90, float offset = 0.009f)
+		public static Decal CreateDecal(Vector3 position, Vector3 scale, Quaternion rotation, Material material, 
+			Sprite sprite, int maxAngle = 90, float offset = 0.009f)
+		{
+			return CreateDecal(position, rotation, scale, null, material, sprite, ~0, maxAngle, offset);
+		}
+
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Material material, Sprite sprite, 
+			LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
+		{
+			return CreateDecal(position, rotation, Vector3.one, null, material, sprite, ~0, maxAngle, offset);
+		}
+
+		public static Decal CreateDecal(Vector3 position, Vector3 scale, Quaternion rotation, Material material, Sprite sprite, 
+			LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
+		{
+			return CreateDecal(position, rotation, scale, null, material, sprite, ~0, maxAngle, offset);
+		}
+
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Transform parent,
+			Material material, Sprite sprite, int maxAngle = 90, float offset = 0.009f)
+		{
+			return CreateDecal(position, rotation, Vector3.one, parent, material, sprite, ~0, maxAngle, offset);
+		}
+
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale, Transform parent,
+			Material material, Sprite sprite, int maxAngle = 90, float offset = 0.009f)
+		{
+			return CreateDecal(position, rotation, scale, parent, material, sprite, ~0, maxAngle, offset);
+		}
+
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale, Transform parent,
+			Material material, Sprite sprite, LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
 		{
 			var decalGameObject = new GameObject($"Decal ({sprite.name})", typeof(Decal));
 			var decal = decalGameObject.GetComponent<Decal>();
-
-			decal.Material = material;
-			decal.Sprite = sprite;
-			decal.MaxAngle = maxAngle;
-			decal.Offset = offset;
-
-			var tr = decal.transform;
-			tr.position = position;
-			tr.localScale = scale;
-			tr.rotation = rotation;
-
-			decal.GenerateAndSetDirty();
-
-			return decal;
-		}
-
-		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Material material, Sprite sprite, LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
-		{
-			return CreateDecal(position, Vector3.one, rotation, material, sprite, layerMask, maxAngle, offset);
-		}
-
-		public static Decal CreateDecal(Vector3 position, Vector3 scale, Quaternion rotation, Material material, Sprite sprite, LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
-		{
-			var decalGameObject = new GameObject($"Decal ({sprite.name})", typeof(Decal));
-			var decal = decalGameObject.GetComponent<Decal>();
-
+			
 			decal.Material = material;
 			decal.Sprite = sprite;
 			decal.MaxAngle = maxAngle;
@@ -312,6 +316,7 @@ namespace TezDecals.Runtime
 			decal.LayerMask = layerMask;
 
 			var tr = decal.transform;
+			tr.SetParent(parent);
 			tr.position = position;
 			tr.localScale = scale;
 			tr.rotation = rotation;
@@ -372,13 +377,24 @@ namespace TezDecals.Runtime
 			return textureRect;
 		}
 
-		private IEnumerable<Triangle> GetTriangles(MeshFilter[] meshFilters)
+		private IEnumerable<Triangle> GetTriangles(IEnumerable<Renderer> renderers)
 		{
-			foreach (var meshFilter in meshFilters)
+			foreach (var r in renderers)
 			{
-				var meshFilterIntersectionMatrix = transform.worldToLocalMatrix * meshFilter.transform.localToWorldMatrix;
-				
-				var mesh = meshFilter.sharedMesh;
+				Mesh mesh = null;
+				if (r.TryGetComponent(out MeshFilter meshFilter))
+				{
+					mesh = meshFilter.sharedMesh;
+				}
+				else if (r.TryGetComponent(out SkinnedMeshRenderer skinnedMeshRenderer))
+				{
+					mesh = skinnedMeshRenderer.sharedMesh;
+				}
+
+				if (mesh == null)
+					continue;
+
+				var meshFilterIntersectionMatrix = transform.worldToLocalMatrix * r.transform.localToWorldMatrix;
 
 				var vertices = mesh.vertices;
 				var triangles = mesh.triangles;

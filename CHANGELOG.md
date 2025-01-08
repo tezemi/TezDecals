@@ -1,6 +1,10 @@
 # Change Log:
 
-## 1.1
+## 1.0.4
+- Added additional methods for creating decals which let you specify a parent.
+- Decals now generate on both MeshRenderers and SkinnedMeshRenderers.
+
+## 1.0.3
 
 - Added additional methods for creating decals which incorporate scale.
 - Bug fix: Fixed issues with the max angle property.
