@@ -1,5 +1,8 @@
 # Change Log:
 
+## 1.0.5
+- Bug fix: Some static decal creation methods weren't properly setting the layer mask.
+
 ## 1.0.4
 - Added additional methods for creating decals which let you specify a parent.
 - Decals now generate on both MeshRenderers and SkinnedMeshRenderers.
