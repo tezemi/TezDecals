@@ -1,5 +1,8 @@
 # Change Log:
 
+## 1.0.8
+- Removed debug messages.
+
 ## 1.0.7
 - Added an additional methods for creating decals that let you specify mesh collider generation.
 

@@ -254,8 +254,6 @@ namespace TezDecals.Runtime
 					            (LayerMask & (1 << c.gameObject.layer)) != 0 &&
 					            (c.gameObject.isStatic || !gameObject.isStatic) &&
 					            !c.TryGetComponent<Decal>(out var _)).Select(c => c.gameObject));
-
-					Debug.Log("c2:" + intersectingGameObjects.Count());
 				}
 
 				//if (AutoUpdateNormal)
