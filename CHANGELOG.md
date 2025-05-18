@@ -1,5 +1,8 @@
 # Change Log:
 
+## 1.0.9
+- Decals no longer try to generate using unreadable meshes.
+
 ## 1.0.8
 - Removed debug messages.
 

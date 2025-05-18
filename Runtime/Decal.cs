@@ -447,7 +447,7 @@ namespace TezDecals.Runtime
 					mesh = meshCollider.sharedMesh;
 				}
 
-				if (mesh == null)
+				if (mesh == null || !mesh.isReadable)
 					continue;
 
 				var meshFilterIntersectionMatrix = transform.worldToLocalMatrix * r.transform.localToWorldMatrix;
