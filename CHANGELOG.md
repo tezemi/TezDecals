@@ -1,5 +1,8 @@
 # Change Log:
 
+## 1.0.7
+- Added an additional methods for creating decals that let you specify mesh collider generation.
+
 ## 1.0.6
 - Added an option to generate decals when they are intersecting with mesh colliders (as opposed to just renderers).
 

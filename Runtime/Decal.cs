@@ -350,6 +350,12 @@ namespace TezDecals.Runtime
 			return CreateDecal(position, rotation, scale, parent, material, sprite, layerMask, false, maxAngle, offset);
 		}
 
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale,
+			Material material, Sprite sprite, LayerMask layerMask, bool generateOnColliders, int maxAngle = 90, float offset = 0.009f)
+		{
+			return CreateDecal(position, rotation, scale, null, material, sprite, layerMask, generateOnColliders, maxAngle, offset);
+		}
+
 		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale, Transform parent,
 			Material material, Sprite sprite, LayerMask layerMask, bool generateOnColliders, int maxAngle = 90, float offset = 0.009f)
 		{
