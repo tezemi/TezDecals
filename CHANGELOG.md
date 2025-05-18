@@ -1,5 +1,8 @@
 # Change Log:
 
+## 1.0.6
+- Added an option to generate decals when they are intersecting with mesh colliders (as opposed to just renderers).
+
 ## 1.0.5
 - Bug fix: Some static decal creation methods weren't properly setting the layer mask.
 

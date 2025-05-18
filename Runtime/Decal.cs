@@ -12,6 +12,8 @@ namespace TezDecals.Runtime
     public class Decal : MonoBehaviour
     {
         public bool FixedAspect = true;
+        public bool GenerateWhenIntersectingMeshColliders;
+        public bool AutoUpdateNormal;
         public int MaxAngle = 120;
         public float Offset = 0.009f;
 		public LayerMask LayerMask = -1;
@@ -234,14 +236,53 @@ namespace TezDecals.Runtime
 			{
 				_meshGenerator.Clear();
 
-				var bounds = Bounds;
-				var intersectingRenderers = FindObjectsOfType<Renderer>()
+				Bounds bounds = Bounds;
+
+				List<GameObject> intersectingGameObjects = new List<GameObject>();
+
+
+				intersectingGameObjects.AddRange(FindObjectsOfType<Renderer>()
 					.Where(mr => bounds.Intersects(mr.bounds) &&
 					             (LayerMask & (1 << mr.gameObject.layer)) != 0 &&
 					             (mr.gameObject.isStatic || !gameObject.isStatic) &&
-					             !mr.TryGetComponent<Decal>(out var _));
+					             !mr.TryGetComponent<Decal>(out var _)).Select(r => r.gameObject));
 				
-				foreach (var triangle in GetTriangles(intersectingRenderers))
+				if (GenerateWhenIntersectingMeshColliders)
+				{
+					intersectingGameObjects.AddRange(FindObjectsOfType<MeshCollider>()
+						.Where(c => bounds.Intersects(c.bounds) &&
+					            (LayerMask & (1 << c.gameObject.layer)) != 0 &&
+					            (c.gameObject.isStatic || !gameObject.isStatic) &&
+					            !c.TryGetComponent<Decal>(out var _)).Select(c => c.gameObject));
+
+					Debug.Log("c2:" + intersectingGameObjects.Count());
+				}
+
+				//if (AutoUpdateNormal)
+				//{
+				//	GameObject g = intersectingRenderers.Union(intersectingColliders).FirstOrDefault();
+				//	if (g != null)
+				//	{
+				//		Bounds boundsA = g.TryGetComponent(out Renderer r) ? r.bounds : g.TryGetComponent(out MeshCollider c) ? c.bounds : new Bounds();
+				//		Bounds boundsB = bounds;
+
+				//		float xMin = Mathf.Max(boundsA.min.x, boundsB.min.x);
+				//		float xMax = Mathf.Min(boundsA.max.x, boundsB.max.x);
+
+				//		float yMin = Mathf.Max(boundsA.min.y, boundsB.min.y);
+				//		float yMax = Mathf.Min(boundsA.max.y, boundsB.max.y);
+
+				//		Vector3 intersectionCenter = new Vector3((xMin + xMax) / 2, (yMin + yMax) / 2, 0);
+				//		Vector3 intersectionSize = new Vector3(xMax - xMin, yMax - yMin, 0);
+
+				//		Debug.DrawLine(intersectionCenter, bounds.center, Color.red, 0.5f);
+
+				//		Vector3 directionTowardsRenderer = (intersectionCenter - bounds.center).normalized;
+				//		transform.rotation = Quaternion.LookRotation(directionTowardsRenderer, transform.forward);
+				//	}
+				//}
+				
+				foreach (var triangle in GetTriangles(intersectingGameObjects))
 				{
 					var face = TrimFace(triangle.Vector1, triangle.Vector2, triangle.Vector3);
 
@@ -306,9 +347,16 @@ namespace TezDecals.Runtime
 		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale, Transform parent,
 			Material material, Sprite sprite, LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
 		{
+			return CreateDecal(position, rotation, scale, parent, material, sprite, layerMask, false, maxAngle, offset);
+		}
+
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale, Transform parent,
+			Material material, Sprite sprite, LayerMask layerMask, bool generateOnColliders, int maxAngle = 90, float offset = 0.009f)
+		{
 			var decalGameObject = new GameObject($"Decal ({sprite.name})", typeof(Decal));
 			var decal = decalGameObject.GetComponent<Decal>();
-			
+
+			decal.GenerateWhenIntersectingMeshColliders = generateOnColliders;
 			decal.Material = material;
 			decal.Sprite = sprite;
 			decal.MaxAngle = maxAngle;
@@ -377,7 +425,7 @@ namespace TezDecals.Runtime
 			return textureRect;
 		}
 
-		private IEnumerable<Triangle> GetTriangles(IEnumerable<Renderer> renderers)
+		private IEnumerable<Triangle> GetTriangles(IEnumerable<GameObject> renderers)
 		{
 			foreach (var r in renderers)
 			{
@@ -389,6 +437,10 @@ namespace TezDecals.Runtime
 				else if (r.TryGetComponent(out SkinnedMeshRenderer skinnedMeshRenderer))
 				{
 					mesh = skinnedMeshRenderer.sharedMesh;
+				}
+				else if (r.TryGetComponent(out MeshCollider meshCollider))
+				{
+					mesh = meshCollider.sharedMesh;
 				}
 
 				if (mesh == null)

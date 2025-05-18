@@ -14,6 +14,8 @@ namespace TezDecals.Editor
             var decal = target as Decal;
 
 			decal.FixedAspect = EditorGUILayout.Toggle("Fixed Aspect", decal.FixedAspect);
+			decal.GenerateWhenIntersectingMeshColliders = EditorGUILayout.Toggle("Generate When Intersecting Mesh Colliders", decal.GenerateWhenIntersectingMeshColliders);
+			//decal.AutoUpdateNormal = EditorGUILayout.Toggle("Auto Update Normal", decal.AutoUpdateNormal);
 			decal.LayerMask = LayerMaskField("Layer Mask", decal.LayerMask);
 			decal.MaxAngle = (int)EditorGUILayout.Slider("Max Angle", decal.MaxAngle, Decal.MinMaxAngle, Decal.MaxMaxAngle);
 			decal.Offset = EditorGUILayout.Slider("Offset", decal.Offset, Decal.MinOffset, Decal.MaxOffset);
