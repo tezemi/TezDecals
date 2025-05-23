@@ -1,7 +1,7 @@
 {
   "name": "com.tezemi.tezdecals",
   "displayName": "TezDecals",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "unity": "2020.3",
   "description": "Tool for creating decals.",
   "type": "library",

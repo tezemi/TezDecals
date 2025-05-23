@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 
 namespace TezDecals.Runtime
@@ -452,28 +453,59 @@ namespace TezDecals.Runtime
 
 				var meshFilterIntersectionMatrix = transform.worldToLocalMatrix * r.transform.localToWorldMatrix;
 
-				var vertices = mesh.vertices;
-				var triangles = mesh.triangles;
-
-				for (var i = 0; i < triangles.Length; i += 3)
+				for (int j = 0; j < mesh.subMeshCount; j++)
 				{
-					var i1 = triangles[i];
-					var i2 = triangles[i + 1];
-					var i3 = triangles[i + 2];
+					SubMeshDescriptor subMeshDescriptor = mesh.GetSubMesh(j);
+					Bounds subMeshBounds = new Bounds(r.transform.position + subMeshDescriptor.bounds.center, subMeshDescriptor.bounds.size);
+					if (subMeshBounds.Intersects(Bounds))
+					{
+						var vertices = mesh.vertices;
+						var triangles = mesh.triangles;
 
-					var v1 = vertices[i1];
-					var v2 = vertices[i2];
-					var v3 = vertices[i3];
+						for (var i = subMeshDescriptor.indexStart; i < subMeshDescriptor.indexCount; i += 3)
+						{
+							var i1 = triangles[i];
+							var i2 = triangles[i + 1];
+							var i3 = triangles[i + 2];
 
-					var triangle = new Triangle(v1, v2, v3);
-					var transformedTriangle = Transform(triangle, meshFilterIntersectionMatrix);
+							var v1 = vertices[i1];
+							var v2 = vertices[i2];
+							var v3 = vertices[i3];
 
-					var normal = GetNormal(transformedTriangle);
-					var angle = Vector3.Angle(Vector3.back, normal);
+							var triangle = new Triangle(v1, v2, v3);
+							var transformedTriangle = Transform(triangle, meshFilterIntersectionMatrix);
 
-					if (angle <= MaxAngle)
-						yield return transformedTriangle;
+							var normal = GetNormal(transformedTriangle);
+							var angle = Vector3.Angle(Vector3.back, normal);
+
+							if (angle <= MaxAngle)
+								yield return transformedTriangle;
+						}
+					}
 				}
+
+				//var vertices = mesh.vertices;
+				//var triangles = mesh.triangles;
+
+				//for (var i = 0; i < triangles.Length; i += 3)
+				//{
+				//	var i1 = triangles[i];
+				//	var i2 = triangles[i + 1];
+				//	var i3 = triangles[i + 2];
+
+				//	var v1 = vertices[i1];
+				//	var v2 = vertices[i2];
+				//	var v3 = vertices[i3];
+
+				//	var triangle = new Triangle(v1, v2, v3);
+				//	var transformedTriangle = Transform(triangle, meshFilterIntersectionMatrix);
+
+				//	var normal = GetNormal(transformedTriangle);
+				//	var angle = Vector3.Angle(Vector3.back, normal);
+
+				//	if (angle <= MaxAngle)
+				//		yield return transformedTriangle;
+				//}
 			}
 
 			Triangle Transform(Triangle triangle, Matrix4x4 matrix)

@@ -1,5 +1,8 @@
 # Change Log:
 
+## 1.0.10
+- Decals now generate using triangles from intersecting submeshindex, improving performance for combined meshes.
+
 ## 1.0.9
 - Decals no longer try to generate using unreadable meshes.
 
