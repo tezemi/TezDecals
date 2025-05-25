@@ -32,6 +32,7 @@ This is what a newly created decal component looks like:
 
 Here is a quick explanation of each property:
 - **Fixed Aspect**: True by default, this will cause the decal's scale to stay at a fixed ratio that matches the shape of the sprite. This is good for ensuring your decal won't stretch or warp when resizing it, however, sometimes that effect can be desirable, so this can be disabled.
+- **Decal Source**: Determines what components the decal will generate on. By default, this is mesh renderers, which is recommended. You can also select skinned mesh renderers or mesh colliders if needed, but this can hurt performance at runtime.
 - **Layer Mask**: Defines the layers that the decal will appear on. Can be useful for getting the decal to appear on some surfaces, while avoiding others (for example, water).
 - **Max Angle**: The max angle at which a decal will "wrap" around a surface. More will be explained later.
 - **Offset**: The distance the decal will be generated from the surface. This prevents z-clipping issues and can be increased if needed.
@@ -109,7 +110,7 @@ if (raycastHit)
 	);
 }
 ```
-This would create a decal in front of the camera, facing away from the hit surface. It will be generated right after it's created.
+This would create a decal in front of the camera, facing away from the hit surface. It will be generated right after it's created. There is also an option to pass a "DecalSource." This is a renderer that the decal will use exclusively for generation. Doing this will dramatically improve performance of the decal's creation, and can be good if you know the surface your decal will be generated on (for example, if creating a bullet hole on a wall, use the wall as the argument).
  
  
  

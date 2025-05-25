@@ -1,8 +1,9 @@
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Collections;
 using UnityEngine.Rendering;
-using UnityEngine.UIElements;
 
 namespace TezDecals.Runtime
 {
@@ -13,13 +14,14 @@ namespace TezDecals.Runtime
     public class Decal : MonoBehaviour
     {
         public bool FixedAspect = true;
-        public bool GenerateWhenIntersectingMeshColliders;
         public bool AutoUpdateNormal;
         public int MaxAngle = 120;
         public float Offset = 0.009f;
-		public LayerMask LayerMask = -1;
+        public DecalSource Source = DecalSource.MeshRenderer;
+        public LayerMask LayerMask = -1;
 		public Material Material;
         public Sprite Sprite;
+        public MeshCollider ColliderSource { get; private set; }
 		public const int MinMaxAngle = 0;
 		public const int MaxMaxAngle = 180;
 		public const float MinOffset = 0.005f;
@@ -29,6 +31,8 @@ namespace TezDecals.Runtime
 		private MeshRenderer _meshRenderer;
 		private readonly Color _noSpriteGizmoColor = new Color(0f, 1f, 1f, 0.35f);
 		private readonly MeshGenerator _meshGenerator = new MeshGenerator();
+		private readonly List<Triangle> _triangles = new List<Triangle>();
+
 		#if UNITY_EDITOR
 		private static readonly List<Decal> _selectedDecals = new List<Decal>();
 		#endif		
@@ -75,7 +79,7 @@ namespace TezDecals.Runtime
 				var min = -size / 2f;
 				var max = size / 2f;
 
-				var points = new Vector3[]
+				var points = new[]
 				{
 					new Vector3(min.x, min.y, min.z),
 					new Vector3(max.x, min.y, min.z),
@@ -149,6 +153,8 @@ namespace TezDecals.Runtime
 			if (Material == null)
             {
                 Sprite = null;
+
+                return;
             }
 
             if (Sprite != null && Material.mainTexture != Sprite.texture)
@@ -173,8 +179,9 @@ namespace TezDecals.Runtime
 		{
 			DrawBoundingBox();
 
-			var forward = -transform.forward;
-			DrawArrow(transform.position, forward * 1.5f, Color.cyan);
+			var t = transform;
+			var forward = -t.forward;
+			DrawArrow(t.position, forward * 1.5f, Color.cyan);
 		}
 
 		protected virtual void Awake()
@@ -207,11 +214,13 @@ namespace TezDecals.Runtime
 
 		public void Generate()
 		{
+			Transform t = transform;
+
 			if (Sprite != null && FixedAspect)
 			{
-				var rect = Sprite.rect;
-				var scale = transform.localScale;
-				var ratio = rect.width / rect.height;
+				Rect rect = Sprite.rect;
+				Vector3 scale = transform.localScale;
+				float ratio = rect.width / rect.height;
 
 				if (!Mathf.Approximately(_oldScale.x, scale.x))
 				{
@@ -228,60 +237,49 @@ namespace TezDecals.Runtime
 
 				_oldScale = scale;
 
-				var hasChanged = transform.hasChanged;
-				transform.localScale = scale;
-				transform.hasChanged = hasChanged;
+				bool hasChanged = t.hasChanged;
+				t.localScale = scale;
+				t.hasChanged = hasChanged;
 			}
 
 			if (Material != null && Sprite != null)
 			{
+				_triangles.Clear();
 				_meshGenerator.Clear();
-
-				Bounds bounds = Bounds;
-
-				List<GameObject> intersectingGameObjects = new List<GameObject>();
-
-
-				intersectingGameObjects.AddRange(FindObjectsOfType<Renderer>()
-					.Where(mr => bounds.Intersects(mr.bounds) &&
-					             (LayerMask & (1 << mr.gameObject.layer)) != 0 &&
-					             (mr.gameObject.isStatic || !gameObject.isStatic) &&
-					             !mr.TryGetComponent<Decal>(out var _)).Select(r => r.gameObject));
-				
-				if (GenerateWhenIntersectingMeshColliders)
+				if (ColliderSource != null)
 				{
-					intersectingGameObjects.AddRange(FindObjectsOfType<MeshCollider>()
-						.Where(c => bounds.Intersects(c.bounds) &&
-					            (LayerMask & (1 << c.gameObject.layer)) != 0 &&
-					            (c.gameObject.isStatic || !gameObject.isStatic) &&
-					            !c.TryGetComponent<Decal>(out var _)).Select(c => c.gameObject));
+					_triangles.AddRange(GetTriangles(ColliderSource.transform, ColliderSource.sharedMesh));
+				}
+				else
+				{
+					foreach (GameObject otherGameObject in FindObjectsOfType<GameObject>())
+					{
+						if (otherGameObject == gameObject)
+							continue;
+						
+						if (Source.HasFlag(DecalSource.MeshRenderer) &&
+						    otherGameObject.TryGetComponent(out MeshRenderer meshRenderer) &&
+						    otherGameObject.TryGetComponent(out MeshFilter meshFilter) &&
+						    IsValid(otherGameObject, meshRenderer.bounds))
+						{
+							_triangles.AddRange(GetTriangles(otherGameObject.transform, meshFilter.sharedMesh));
+						}
+						else if (Source.HasFlag(DecalSource.SkinnedMeshRenderer) &&
+					         otherGameObject.TryGetComponent(out SkinnedMeshRenderer skinnedMeshRenderer) &&
+					         IsValid(otherGameObject, skinnedMeshRenderer.bounds))
+						{
+							_triangles.AddRange(GetTriangles(otherGameObject.transform, skinnedMeshRenderer.sharedMesh));
+						}
+						else if (Source.HasFlag(DecalSource.MeshCollider) &&
+					         otherGameObject.TryGetComponent(out MeshCollider meshCollider) &&
+					         IsValid(otherGameObject, meshCollider.bounds))
+						{
+							_triangles.AddRange(GetTriangles(otherGameObject.transform, meshCollider.sharedMesh));
+						}
+					}
 				}
 
-				//if (AutoUpdateNormal)
-				//{
-				//	GameObject g = intersectingRenderers.Union(intersectingColliders).FirstOrDefault();
-				//	if (g != null)
-				//	{
-				//		Bounds boundsA = g.TryGetComponent(out Renderer r) ? r.bounds : g.TryGetComponent(out MeshCollider c) ? c.bounds : new Bounds();
-				//		Bounds boundsB = bounds;
-
-				//		float xMin = Mathf.Max(boundsA.min.x, boundsB.min.x);
-				//		float xMax = Mathf.Min(boundsA.max.x, boundsB.max.x);
-
-				//		float yMin = Mathf.Max(boundsA.min.y, boundsB.min.y);
-				//		float yMax = Mathf.Min(boundsA.max.y, boundsB.max.y);
-
-				//		Vector3 intersectionCenter = new Vector3((xMin + xMax) / 2, (yMin + yMax) / 2, 0);
-				//		Vector3 intersectionSize = new Vector3(xMax - xMin, yMax - yMin, 0);
-
-				//		Debug.DrawLine(intersectionCenter, bounds.center, Color.red, 0.5f);
-
-				//		Vector3 directionTowardsRenderer = (intersectionCenter - bounds.center).normalized;
-				//		transform.rotation = Quaternion.LookRotation(directionTowardsRenderer, transform.forward);
-				//	}
-				//}
-				
-				foreach (var triangle in GetTriangles(intersectingGameObjects))
+				foreach (var triangle in _triangles)
 				{
 					var face = TrimFace(triangle.Vector1, triangle.Vector2, triangle.Vector3);
 
@@ -291,6 +289,14 @@ namespace TezDecals.Runtime
 
 				MeshFilter.sharedMesh = _meshGenerator.GenerateMesh(MeshFilter.sharedMesh, GetSpriteUV(), Offset);
 				MeshRenderer.sharedMaterial = Material;
+
+				bool IsValid(GameObject other, Bounds b)
+				{
+					return Bounds.Intersects(b) &&
+				       (LayerMask & (1 << other.layer)) != 0 &&
+				       (other.isStatic || !gameObject.isStatic) &&
+				       !other.TryGetComponent<Decal>(out _);
+				}
 			}
 			else
 			{
@@ -307,66 +313,57 @@ namespace TezDecals.Runtime
 			SetDirty();
 		}
 	
-		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Material material, Sprite sprite, 
-			int maxAngle = 90, float offset = 0.009f)
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Material material, Sprite sprite, int maxAngle = 90, float offset = 0.009f)
 		{
 			return CreateDecal(position, rotation, Vector3.one, null, material, sprite, ~0, maxAngle, offset);
 		}
 
-		public static Decal CreateDecal(Vector3 position, Vector3 scale, Quaternion rotation, Material material, 
-			Sprite sprite, int maxAngle = 90, float offset = 0.009f)
+		public static Decal CreateDecal(Vector3 position, Vector3 scale, Quaternion rotation, Material material, Sprite sprite, int maxAngle = 90, float offset = 0.009f)
 		{
 			return CreateDecal(position, rotation, scale, null, material, sprite, ~0, maxAngle, offset);
 		}
 
-		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Material material, Sprite sprite, 
-			LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Material material, Sprite sprite, LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
 		{
 			return CreateDecal(position, rotation, Vector3.one, null, material, sprite, layerMask, maxAngle, offset);
 		}
 
-		public static Decal CreateDecal(Vector3 position, Vector3 scale, Quaternion rotation, Material material, Sprite sprite, 
-			LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
+		public static Decal CreateDecal(Vector3 position, Vector3 scale, Quaternion rotation, Material material, Sprite sprite, LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
 		{
 			return CreateDecal(position, rotation, scale, null, material, sprite, layerMask, maxAngle, offset);
 		}
 
-		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Transform parent,
-			Material material, Sprite sprite, int maxAngle = 90, float offset = 0.009f)
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Transform parent, Material material, Sprite sprite, int maxAngle = 90, float offset = 0.009f)
 		{
 			return CreateDecal(position, rotation, Vector3.one, parent, material, sprite, ~0, maxAngle, offset);
 		}
 
-		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale, Transform parent,
-			Material material, Sprite sprite, int maxAngle = 90, float offset = 0.009f)
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale, Transform parent, Material material, Sprite sprite, int maxAngle = 90, float offset = 0.009f)
 		{
 			return CreateDecal(position, rotation, scale, parent, material, sprite, ~0, maxAngle, offset);
 		}
 
-		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale, Transform parent,
-			Material material, Sprite sprite, LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale, Transform parent, Material material, Sprite sprite, LayerMask layerMask, int maxAngle = 90, float offset = 0.009f)
 		{
-			return CreateDecal(position, rotation, scale, parent, material, sprite, layerMask, false, maxAngle, offset);
+			return CreateDecal(position, rotation, scale, parent, material, sprite, layerMask, null, maxAngle, offset);
 		}
 
-		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale,
-			Material material, Sprite sprite, LayerMask layerMask, bool generateOnColliders, int maxAngle = 90, float offset = 0.009f)
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale, Material material, Sprite sprite, LayerMask layerMask, MeshCollider colliderSource, int maxAngle = 90, float offset = 0.009f)
 		{
-			return CreateDecal(position, rotation, scale, null, material, sprite, layerMask, generateOnColliders, maxAngle, offset);
+			return CreateDecal(position, rotation, scale, null, material, sprite, layerMask, colliderSource, maxAngle, offset);
 		}
 
-		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale, Transform parent,
-			Material material, Sprite sprite, LayerMask layerMask, bool generateOnColliders, int maxAngle = 90, float offset = 0.009f)
+		public static Decal CreateDecal(Vector3 position, Quaternion rotation, Vector3 scale, Transform parent, Material material, Sprite sprite, LayerMask layerMask, MeshCollider colliderSource, int maxAngle = 90, float offset = 0.009f)
 		{
 			var decalGameObject = new GameObject($"Decal ({sprite.name})", typeof(Decal));
 			var decal = decalGameObject.GetComponent<Decal>();
 
-			decal.GenerateWhenIntersectingMeshColliders = generateOnColliders;
 			decal.Material = material;
 			decal.Sprite = sprite;
 			decal.MaxAngle = maxAngle;
 			decal.Offset = offset;
 			decal.LayerMask = layerMask;
+			decal.ColliderSource = colliderSource;
 
 			var tr = decal.transform;
 			tr.SetParent(parent);
@@ -430,82 +427,52 @@ namespace TezDecals.Runtime
 			return textureRect;
 		}
 
-		private IEnumerable<Triangle> GetTriangles(IEnumerable<GameObject> renderers)
+		private IEnumerable<Triangle> GetTriangles(Transform t, Mesh mesh)
 		{
-			foreach (var r in renderers)
+			if (mesh == null || !mesh.isReadable)
+				yield break;
+
+			Bounds myBounds = Bounds;
+			Matrix4x4 meshFilterIntersectionMatrix = transform.worldToLocalMatrix * t.localToWorldMatrix;
+			
+			using Mesh.MeshDataArray meshDataArray = Mesh.AcquireReadOnlyMeshData(mesh);
+			Mesh.MeshData data = meshDataArray[0];
+
+			using NativeArray<Vector3> vertices = new NativeArray<Vector3>(mesh.vertexCount, Allocator.TempJob);
+			data.GetVertices(vertices);
+			
+			for (int j = 0; j < mesh.subMeshCount; j++)
 			{
-				Mesh mesh = null;
-				if (r.TryGetComponent(out MeshFilter meshFilter))
-				{
-					mesh = meshFilter.sharedMesh;
-				}
-				else if (r.TryGetComponent(out SkinnedMeshRenderer skinnedMeshRenderer))
-				{
-					mesh = skinnedMeshRenderer.sharedMesh;
-				}
-				else if (r.TryGetComponent(out MeshCollider meshCollider))
-				{
-					mesh = meshCollider.sharedMesh;
-				}
-
-				if (mesh == null || !mesh.isReadable)
+				SubMeshDescriptor subMeshDescriptor = mesh.GetSubMesh(j);
+				Bounds subMeshBounds = new Bounds(t.TransformPoint(subMeshDescriptor.bounds.center), t.TransformVector(subMeshDescriptor.bounds.size));
+				subMeshBounds.size = new Vector3(Mathf.Abs(subMeshBounds.size.x), Mathf.Abs(subMeshBounds.size.y), Mathf.Abs(subMeshBounds.size.z));
+				
+				if (!myBounds.Intersects(subMeshBounds))
 					continue;
+				
+				using NativeArray<ushort> triangles = new NativeArray<ushort>((int)mesh.GetIndexCount(j), Allocator.TempJob);
+				
+				data.GetIndices(triangles, j);
 
-				var meshFilterIntersectionMatrix = transform.worldToLocalMatrix * r.transform.localToWorldMatrix;
-
-				for (int j = 0; j < mesh.subMeshCount; j++)
+				for (int i = 0; i < triangles.Length; i += 3)
 				{
-					SubMeshDescriptor subMeshDescriptor = mesh.GetSubMesh(j);
-					Bounds subMeshBounds = new Bounds(r.transform.position + subMeshDescriptor.bounds.center, subMeshDescriptor.bounds.size);
-					if (subMeshBounds.Intersects(Bounds))
-					{
-						var vertices = mesh.vertices;
-						var triangles = mesh.triangles;
+					int i1 = triangles[i];
+					int i2 = triangles[i + 1];
+					int i3 = triangles[i + 2];
 
-						for (var i = subMeshDescriptor.indexStart; i < subMeshDescriptor.indexCount; i += 3)
-						{
-							var i1 = triangles[i];
-							var i2 = triangles[i + 1];
-							var i3 = triangles[i + 2];
+					Vector3 v1 = vertices[i1];
+					Vector3 v2 = vertices[i2];
+					Vector3 v3 = vertices[i3];
 
-							var v1 = vertices[i1];
-							var v2 = vertices[i2];
-							var v3 = vertices[i3];
+					Triangle triangle = new Triangle(v1, v2, v3);
+					Triangle transformedTriangle = Transform(triangle, meshFilterIntersectionMatrix);
 
-							var triangle = new Triangle(v1, v2, v3);
-							var transformedTriangle = Transform(triangle, meshFilterIntersectionMatrix);
+					Vector3 normal = GetNormal(transformedTriangle);
+					float angle = Vector3.Angle(Vector3.back, normal);
 
-							var normal = GetNormal(transformedTriangle);
-							var angle = Vector3.Angle(Vector3.back, normal);
-
-							if (angle <= MaxAngle)
-								yield return transformedTriangle;
-						}
-					}
+					if (angle <= MaxAngle)
+						yield return transformedTriangle;
 				}
-
-				//var vertices = mesh.vertices;
-				//var triangles = mesh.triangles;
-
-				//for (var i = 0; i < triangles.Length; i += 3)
-				//{
-				//	var i1 = triangles[i];
-				//	var i2 = triangles[i + 1];
-				//	var i3 = triangles[i + 2];
-
-				//	var v1 = vertices[i1];
-				//	var v2 = vertices[i2];
-				//	var v3 = vertices[i3];
-
-				//	var triangle = new Triangle(v1, v2, v3);
-				//	var transformedTriangle = Transform(triangle, meshFilterIntersectionMatrix);
-
-				//	var normal = GetNormal(transformedTriangle);
-				//	var angle = Vector3.Angle(Vector3.back, normal);
-
-				//	if (angle <= MaxAngle)
-				//		yield return transformedTriangle;
-				//}
 			}
 
 			Triangle Transform(Triangle triangle, Matrix4x4 matrix)
@@ -574,6 +541,14 @@ namespace TezDecals.Runtime
 					return ray.GetPoint(enter);
 				}
 			}
-		}		
-	}
+		}
+		
+		[Flags]
+		public enum DecalSource
+		{
+			MeshRenderer = 2,
+			SkinnedMeshRenderer = 4,
+			MeshCollider = 8
+		}
+    }
 }

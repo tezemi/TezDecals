@@ -1,5 +1,10 @@
 # Change Log:
 
+## 1.1.0
+- Added a dropdown for selecting the decal source.
+- Significantly improved performance of decals by making use of readonly mesh data and automatically excluding submeshes that don't intersect with the decal.
+- Added a new static decal creation method that allows you to specify a specific decal source.
+
 ## 1.0.10
 - Decals now generate using triangles from intersecting submeshindex, improving performance for combined meshes.
 
